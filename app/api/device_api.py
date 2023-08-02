@@ -4,8 +4,9 @@ from app.model.device import Devices
 from app.param.device_param import Devices_Param
 from app.utils.IdUtil import get_id
 from datetime import datetime
+from app.config.security import check_token
 
-router = APIRouter(prefix="/device")
+router = APIRouter(prefix="/device", dependencies=[Depends(check_token)])
 
 
 @router.get("/list")
@@ -29,7 +30,7 @@ async def add(data: Devices_Param, db: Session = Depends(getSesion)):
         # 更新对象的属性
         for key, value in dict_data.items():
             setattr(devices, key, value)
-        devices.update_time = datetime.now()    
+        devices.update_time = datetime.now()
     else:
         devices = Devices(**data.model_dump())
         devices.id = get_id()

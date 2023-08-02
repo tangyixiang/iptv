@@ -4,8 +4,9 @@ from app.model.device import Device_Config
 from app.param.device_param import Device_Config_Param
 from app.utils.IdUtil import get_id
 from datetime import datetime
+from app.config.security import check_token
 
-router = APIRouter(prefix="/device_config")
+router = APIRouter(prefix="/device_config", dependencies=[Depends(check_token)])
 
 
 @router.get("/list")
@@ -24,16 +25,16 @@ async def list(pageSize: int, pageNum: int, location_id: str = Query(None), room
 @router.post("/add")
 async def add(data: Device_Config_Param, db: Session = Depends(getSesion)):
     if data.id:
-        Device_Config = db.query(Device_Config).filter(Device_Config.id == data.id).first()
+        config = db.query(Device_Config).filter(Device_Config.id == data.id).first()
         dict_data = data.model_dump()
         # 更新对象的属性
         for key, value in dict_data.items():
-            setattr(Device_Config, key, value)
-        Device_Config.update_time = datetime.now()    
+            setattr(config, key, value)
+        config.update_time = datetime.now()
     else:
-        Device_Config = Device_Config(**data.model_dump())
-        Device_Config.id = get_id()
-        db.add(Device_Config)
+        config = Device_Config(**data.model_dump())
+        config.id = get_id()
+        db.add(config)
     db.commit()
     return {"message": "ok"}
 

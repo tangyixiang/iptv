@@ -4,8 +4,9 @@ from app.model.device import Location
 from app.param.device_param import Location_Param
 from app.utils.IdUtil import get_id
 from datetime import datetime
+from app.config.security import check_token
 
-router = APIRouter(prefix="/location")
+router = APIRouter(prefix="/location", dependencies=[Depends(check_token)])
 
 
 @router.get("/list")

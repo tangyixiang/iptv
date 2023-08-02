@@ -15,6 +15,17 @@ class BaseModel(Base):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
+class User_Info(Base):
+    __tablename__ = "user"
+
+    id = Column(VARCHAR(32), primary_key=True)
+    user_name = Column(VARCHAR(32), comment="用户名")
+    password = Column(VARCHAR(32), comment="密码")
+    name = Column(VARCHAR(32), comment="名称")
+    create_time = Column(DATETIME, default=datetime.now(), comment="创建时间")
+    update_time = Column(DATETIME, default=datetime.now(), onupdate=datetime.now(), comment="更新时间")
+
+
 class Location(Base):
     __tablename__ = "location"
 

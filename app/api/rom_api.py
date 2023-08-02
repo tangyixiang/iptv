@@ -4,8 +4,9 @@ from app.model.device import Rom_Info
 from app.param.device_param import Rom_Info_Param
 from app.utils.IdUtil import get_id
 from datetime import datetime
+from app.config.security import check_token
 
-router = APIRouter(prefix="/rom")
+router = APIRouter(prefix="/rom", dependencies=[Depends(check_token)])
 
 
 @router.get("/list")

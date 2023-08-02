@@ -4,8 +4,9 @@ from app.model.device import Iptv_Plan
 from app.param.device_param import Iptv_Plan_Param
 from app.utils.IdUtil import get_id
 from datetime import datetime
+from app.config.security import check_token
 
-router = APIRouter(prefix="/iptv")
+router = APIRouter(prefix="/iptv", dependencies=[Depends(check_token)])
 
 
 @router.get("/list")
