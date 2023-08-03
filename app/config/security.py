@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Union, Optional
 from fastapi import Header, HTTPException
 from jose import jwt
-from app.common import custom_exc
+from loguru import logger
 
 ALGORITHM = "HS256"
 
@@ -18,7 +18,7 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=60 * 12)
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode = {"exp": expire, "user_id": str(subject)}
     encoded_jwt = jwt.encode(to_encode, "ocs-guilin", algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -32,7 +32,6 @@ def check_token(
     :param token:
     :return:
     """
-
     try:
         payload = jwt.decode(Authorization, "ocs-guilin", algorithms=[ALGORITHM])
         return payload

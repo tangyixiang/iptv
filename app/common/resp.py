@@ -36,6 +36,18 @@ def ok(*, data: Union[list, dict, str] = None, pagination: dict = None, msg: str
     return JSONResponse(status_code=http_status.HTTP_200_OK, content=jsonable_encoder({"status": 200, "msg": msg, "data": data, "pagination": pagination}))
 
 
+def fail2(message: str) -> Response:
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder(
+            {
+                "status": 500,
+                "msg": message,
+            }
+        ),
+    )
+
+
 def fail(resp: Resp) -> Response:
     return JSONResponse(
         status_code=resp.code,

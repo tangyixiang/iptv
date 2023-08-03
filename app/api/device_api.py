@@ -10,8 +10,8 @@ router = APIRouter(prefix="/device", dependencies=[Depends(check_token)])
 
 
 @router.get("/list")
-async def list(pageSize: int, pageNum: int, location_id: str = Query(None), room_id: str = Query(None), db: Session = Depends(getSesion)):
-    offset = (pageNum - 1) * pageSize
+async def list(pageSize: int, current: int, location_id: str = Query(None), room_id: str = Query(None), db: Session = Depends(getSesion)):
+    offset = (current - 1) * pageSize
     query_list = []
     if location_id:
         query_list = query_list.append(Devices.location_id == location_id)

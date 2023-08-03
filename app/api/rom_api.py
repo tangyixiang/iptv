@@ -10,8 +10,8 @@ router = APIRouter(prefix="/rom", dependencies=[Depends(check_token)])
 
 
 @router.get("/list")
-async def list(pageSize: int, pageNum: int, name: str = Query(None), db: Session = Depends(getSesion)):
-    offset = (pageNum - 1) * pageSize
+async def list(pageSize: int, current: int, name: str = Query(None), db: Session = Depends(getSesion)):
+    offset = (current - 1) * pageSize
     query_list = []
     if name:
         query_list = query_list.append(Rom_Info.name == name)
