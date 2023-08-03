@@ -26,8 +26,8 @@ class Devices_Param(BaseModel):
     mac_address: str
     ip_address: str
     port: str
-    other_info: str
-    image_url: str
+    other_info: str = Field(None)
+    image_url: str = Field(None)
 
 
 class Device_Config_Param(BaseModel):

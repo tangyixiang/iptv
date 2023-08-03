@@ -9,6 +9,12 @@ from app.config.security import check_token
 router = APIRouter(prefix="/location", dependencies=[Depends(check_token)])
 
 
+@router.get("/all")
+async def list(db: Session = Depends(getSesion)):
+    data = db.query(Location).all()
+    return {"data": data}
+
+
 @router.get("/list")
 async def list(pageSize: int, current: int, name: str = Query(None), db: Session = Depends(getSesion)):
     offset = (current - 1) * pageSize
@@ -34,7 +40,7 @@ async def add(data: Location_Param, db: Session = Depends(getSesion)):
     return {"message": "ok"}
 
 
-@router.post("/del")
+@router.delete("/del/{id}")
 async def delete(id: str, db: Session = Depends(getSesion)):
     db.query(Location).filter(Location.id == id).delete()
     db.commit()

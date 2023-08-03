@@ -39,7 +39,7 @@ async def add(data: Devices_Param, db: Session = Depends(getSesion)):
     return {"message": "ok"}
 
 
-@router.post("/del")
+@router.delete("/del/{id}")
 async def delete(id: str, db: Session = Depends(getSesion)):
     db.query(Devices).filter(Devices.id == id).delete()
     db.commit()
