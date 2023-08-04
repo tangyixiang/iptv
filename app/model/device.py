@@ -90,6 +90,7 @@ class Device_Config(Base):
     wlan_password = Column(VARCHAR(64), comment="wifi ssid名称")
 
     hotspot_swtich = Column(INTEGER(1), comment="热点开关 0 关闭 1 开启")
+    hotspot_ssid = Column(VARCHAR(32), comment="热点ssid名称")
     hotspot_password = Column(VARCHAR(32), comment="热点密码")
 
     create_time = Column(DATETIME, default=datetime.now(), comment="创建时间")

@@ -4,9 +4,9 @@ import adbutils
 from binascii import hexlify
 from fastapi import APIRouter, Depends, HTTPException
 from app.config.db import *
-from app.model.device import Devices
+from app.model.device import Devices, Device_Config
 from app.config.security import check_token
-from app.model.params import *
+from app.model.operate_params import *
 from adbutils import AdbTimeout
 
 
@@ -25,7 +25,27 @@ def reboot(deviceId: str, db: Session = Depends(getSesion)):
     # 连接
     os.system(f"adb connect {host}")
     os.system("adb shell")
-    os.system("adb reboot")
+    os.system("reboot")
+    return {"message": "ok"}
+
+
+@router.get("/apk/open")
+def apk_model(param: apk_param, db: Session = Depends(getSesion)):
+    host = connect_device(param.deviceId, db)
+    value = 0
+    if param.open == "true":
+        value = 1
+        os.system("adb shell settings put global install_non_market_apps 1")
+    else:
+        os.system("adb shell settings put global install_non_market_apps 0")
+
+    configList = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).all()
+    if configList:
+        configList[0].apk_install_swtich(value)
+    else:
+        temp_config = Device_Config(device_id=param.deviceId, apk_install_swtich=value)
+        db.add(temp_config)
+    db.commit()
     return {"message": "ok"}
 
 
@@ -56,7 +76,9 @@ def connect_device(deviceId: str, db: Session):
 @router.post("/wifi")
 def manage_wlan(param: wlan_param, db: Session = Depends(getSesion)):
     host = connect_device(param.deviceId, db)
+    value = 0
     if param.open == "true":
+        value = 1
         os.system(f"adb shell ifconfig wlan0 up")
         os.system(f"adb pull /data/misc/wifi/wpa_supplicant.conf {wpa_supplicant_path}")
         with open(wpa_supplicant_path, "r") as f:
@@ -78,6 +100,18 @@ def manage_wlan(param: wlan_param, db: Session = Depends(getSesion)):
     else:
         os.system(f"adb shell ifconfig wlan0 down")
     os.system(f"adb disconnect {host}")
+
+    configList = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).all()
+    if configList:
+        configList[0].wlan_swtich(value)
+        configList[0].wlan_ssid(param.ssid)
+        configList[0].wlan_password(param.password)
+
+    else:
+        temp_config = Device_Config(device_id=param.deviceId, wlan_swtich=value, wlan_ssid=param.ssid, wlan_password=param.password)
+        db.add(temp_config)
+    db.commit()
+
     return {"message": "ok"}
 
 
@@ -85,7 +119,9 @@ def manage_wlan(param: wlan_param, db: Session = Depends(getSesion)):
 @router.post("/eth")
 def manage_eth(param: eth_param, db: Session = Depends(getSesion)):
     host = connect_device(param.deviceId, db)
+    value = 0
     if param.open == "true":
+        value = 1
         os.system(f"adb shell ifconfig eth0 up")
         if param.ip_model == "manual":
             os.system("adb shell settings put global eth_mode manual")
@@ -97,13 +133,28 @@ def manage_eth(param: eth_param, db: Session = Depends(getSesion)):
     else:
         os.system(f"adb shell ifconfig eth0 down")
     os.system(f"adb disconnect {host}")
+
+    configList = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).all()
+    if configList:
+        configList[0].eth_swtich(value)
+        configList[0].eth_ip_method(param.ip_model)
+        configList[0].eth_ip_address(param.ip_address)
+        configList[0].eth_net_mask(param.mask)
+        configList[0].eth_gateway(param.gateway)
+
+    else:
+        temp_config = Device_Config(device_id=param.deviceId, eth_swtich=value, eth_ip_method=param.ip_model, eth_ip_address=param.ip_address, eth_net_mask=param.mask, eth_gateway=param.gateway)
+        db.add(temp_config)
+    db.commit()
     return {"message": "ok"}
 
 
 @router.post("/hotspot")
 def open_hotspot(param: hotspot_param, db: Session = Depends(getSesion)):
     host = connect_device(param.deviceId, db)
+    value = 0
     if param.open == "true":
+        value = 1
         os.system("adb shell settings put global wifi_ap_on 1")
         os.system(f"adb pull /data/misc/wifi/hostapd.conf {hostapd_path}")
         with open(hostapd_path, "r") as f:
@@ -116,6 +167,17 @@ def open_hotspot(param: hotspot_param, db: Session = Depends(getSesion)):
     else:
         os.system("adb shell settings put global wifi_ap_on 0")
     os.system(f"adb disconnect {host}")
+
+    configList = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).all()
+    if configList:
+        configList[0].hotspot_swtich(value)
+        configList[0].hotspot_ssid(param.ssid)
+        configList[0].hotspot_password(param.password)
+
+    else:
+        temp_config = Device_Config(device_id=param.deviceId, hotspot_swtich=value, hotspot_ssid=param.ssid, hotspot_password=param.password)
+        db.add(temp_config)
+    db.commit()
     return {"message": "ok"}
 
 

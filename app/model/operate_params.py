@@ -1,6 +1,11 @@
 from pydantic import BaseModel, Field
 
 
+class apk_param(BaseModel):
+    deviceId: str
+    open: str
+
+
 class config_param(BaseModel):
     deviceId: str
     password: str = Field(None)
