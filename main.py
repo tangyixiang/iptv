@@ -7,6 +7,7 @@ from app.api.rom_api import router as rom_router
 from app.api.device_api import router as device_router
 from app.api.device_config_api import router as device_config_router
 from app.api.login import router as login_router
+from app.api.adb_api import router as adb_router
 
 
 app = FastAPI()
@@ -16,3 +17,4 @@ app.include_router(rom_router)
 app.include_router(device_router)
 app.include_router(device_config_router)
 app.include_router(login_router)
+app.include_router(adb_router)
