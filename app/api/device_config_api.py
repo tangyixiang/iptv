@@ -22,6 +22,15 @@ async def list(pageSize: int, current: int, location_id: str = Query(None), room
     return {"total": total, "list": data}
 
 
+@router.get("/info")
+async def get_config(id: str, db: Session = Depends(getSesion)):
+    data = db.query(Device_Config).filter(Device_Config.device_id == id).all()
+    if data:
+        return {"data": data[0]}
+    else:
+        return {"data": {}}
+
+
 @router.post("/add")
 async def add(data: Device_Config_Param, db: Session = Depends(getSesion)):
     if data.id:
