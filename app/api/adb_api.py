@@ -13,9 +13,9 @@ from adbutils import AdbTimeout
 # router = APIRouter(prefix="/adb", dependencies=[Depends(check_token)])
 router = APIRouter(prefix="/adb")
 
-temp_dir = "D:\\temp"
-hostapd_path = f"{temp_dir}\hostapd.conf"
-wpa_supplicant_path = f"{temp_dir}\wpa_supplicant.conf"
+temp_dir = "/app/temp"
+hostapd_path = f"{temp_dir}/hostapd.conf"
+wpa_supplicant_path = f"{temp_dir}/wpa_supplicant.conf"
 
 
 @router.get("/reboot")

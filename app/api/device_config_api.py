@@ -28,7 +28,7 @@ async def get_config(id: str, db: Session = Depends(getSesion)):
     if data:
         return {"data": data[0]}
     else:
-        return {"data": {}}
+        return {"data": None}
 
 
 @router.post("/add")
