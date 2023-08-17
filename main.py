@@ -26,7 +26,6 @@ app.add_middleware(
 )
 
 
-
 app.include_router(location_router)
 app.include_router(iptv_router)
 app.include_router(rom_router)

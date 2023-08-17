@@ -17,15 +17,14 @@ router = APIRouter(prefix="/adb")
 temp_dir = "/app/temp"
 hostapd_path = f"{temp_dir}/hostapd.conf"
 wpa_supplicant_path = f"{temp_dir}/wpa_supplicant.conf"
+eth_path = f"{temp_dir}/ipconfig.txt"
+
+os.makedirs(temp_dir, exist_ok=True)
 
 
 @router.get("/reboot")
 def reboot(deviceId: str, db: Session = Depends(getSesion)):
-    device = db.query(Devices).filter(Devices.id == deviceId).one()
-    host = device.ip_address + ":" + device.port
-    # 连接
-    logger.info(f"连接设备:{host}")
-    os.system(f"adb connect {host}")
+    host = connect_device(deviceId, db)
 
     logger.info(f"准备重启设备:{host}")
     os.system("adb shell reboot")
@@ -34,7 +33,7 @@ def reboot(deviceId: str, db: Session = Depends(getSesion)):
     return {"message": "ok"}
 
 
-@router.get("/apk/open")
+@router.post("/apk/open")
 def apk_model(param: apk_param, db: Session = Depends(getSesion)):
     host = connect_device(param.deviceId, db)
     value = 0
@@ -87,16 +86,16 @@ def manage_wlan(param: wlan_param, db: Session = Depends(getSesion)):
     if param.open == "true":
         value = 1
         logger.info(f"开始修改设备WiFi数据,设备:{host}")
-        os.system(f"adb shell ifconfig wlan0 up")
+        os.system(f"adb shell settings put global wifi_on 1")
         os.system(f"adb pull /data/misc/wifi/wpa_supplicant.conf {wpa_supplicant_path}")
-        with open(wpa_supplicant_path, "r") as f:
+        with open(f"{wpa_supplicant_path}", "r") as f:
             content = f.read()
             pattern = r"network={[^}]*}"
             networks = re.findall(pattern, content, re.M)
             # print(networks)
 
             # 添加到内容末尾
-            with open(wpa_supplicant_path, "w") as f:
+            with open(f"{wpa_supplicant_path}", "w") as f:
                 f.write(content + "\n")
                 f.write("network={" + "\n")
                 f.write(f'   ssid="{param.ssid}"' + "\n")
@@ -108,7 +107,7 @@ def manage_wlan(param: wlan_param, db: Session = Depends(getSesion)):
         logger.info(f"修改设备WiFi数据完成,设备:{host}")
     else:
         logger.info(f"关闭设备WiFi,设备:{host}")
-        os.system(f"adb shell ifconfig wlan0 down")
+        os.system(f"adb shell settings put global wifi 0")
     os.system(f"adb disconnect {host}")
 
     config = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).one_or_none()
@@ -136,19 +135,21 @@ def manage_eth(param: eth_param, db: Session = Depends(getSesion)):
         os.system(f"adb shell ifconfig eth0 up")
         if param.ip_model == "manual":
             logger.info(f"开始修改设备有线网络数据，修改数据库中的数据,设备:{host}")
-            os.system("adb shell settings put global eth_mode manual")
-            os.system(f"adb shell settings put global eth_ip {param.ip_address}")
-            os.system(f"adb shell settings put global eth_mask {param.mask}")
-            os.system(f"adb shell settings put global eth_dns1 {param.gateway}")
+            os.system("adb shell settings put secure eth_mode manual")
+            os.system(f"adb shell settings put secure eth_ip {param.ip_address}")
+            os.system(f"adb shell settings put secure eth_mask {param.mask}")
+            os.system(f"adb shell settings put secure eth_dns1 {param.gateway}")
         else:
             logger.info(f"开始修改设备有线网络数据，设置获取网络模式为dhcp,设备:{host}")
-            os.system("adb shell settings put global eth_mode dhcp")
+            os.system("adb shell settings put secure eth_mode dhcp")
     else:
         os.system(f"adb shell ifconfig eth0 down")
 
     logger.info(f"准备断开设备:{host}")
     os.system(f"adb disconnect {host}")
     logger.info(f"开始修改数据库数据:{host}")
+    device = db.query(Devices).filter(Devices.id == param.deviceId).one()
+    device.ip_address = param.ip_address
     config = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).one_or_none()
     if config:
         config.eth_swtich = value
@@ -156,7 +157,6 @@ def manage_eth(param: eth_param, db: Session = Depends(getSesion)):
         config.eth_ip_address = param.ip_address
         config.eth_net_mask = param.mask
         config.eth_gateway = param.gateway
-
     else:
         temp_config = Device_Config(device_id=param.deviceId, eth_swtich=value, eth_ip_method=param.ip_model, eth_ip_address=param.ip_address, eth_net_mask=param.mask, eth_gateway=param.gateway)
         db.add(temp_config)
@@ -193,7 +193,6 @@ def open_hotspot(param: hotspot_param, db: Session = Depends(getSesion)):
         config.hotspot_swtich = value
         config.hotspot_ssid = param.ssid
         config.hotspot_password = param.password
-
     else:
         temp_config = Device_Config(device_id=param.deviceId, hotspot_swtich=value, hotspot_ssid=param.ssid, hotspot_password=param.password)
         db.add(temp_config)
