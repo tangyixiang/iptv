@@ -145,8 +145,8 @@ def manage_eth(param: eth_param, db: Session = Depends(getSesion)):
     else:
         os.system(f"adb shell ifconfig eth0 down")
 
-    logger.info(f"准备断开设备:{host}")
-    os.system(f"adb disconnect {host}")
+    logger.info(f"准备重启设备:{host}")
+    os.system(f"adb reboot {host}")
     logger.info(f"开始修改数据库数据:{host}")
     device = db.query(Devices).filter(Devices.id == param.deviceId).one()
     device.ip_address = param.ip_address
