@@ -14,8 +14,8 @@ from loguru import logger
 # router = APIRouter(prefix="/adb", dependencies=[Depends(check_token)])
 router = APIRouter(prefix="/adb")
 
-temp_dir = "/app/temp"
-hostapd_path = f"{temp_dir}/hostapd.conf"
+temp_dir = "temp"
+softap_path = f"{temp_dir}/softap.conf"
 wpa_supplicant_path = f"{temp_dir}/wpa_supplicant.conf"
 eth_path = f"{temp_dir}/ipconfig.txt"
 
@@ -29,7 +29,7 @@ def reboot(deviceId: str, db: Session = Depends(getSesion)):
     logger.info(f"准备重启设备:{host}")
     os.system("adb shell reboot")
     logger.info(f"重启设备完成:{host}")
-
+    os.system(f"adb disconnect")
     return {"message": "ok"}
 
 
@@ -75,7 +75,7 @@ def connect_device(deviceId: str, db: Session):
         logger.info(f"连接设备成功:{host}")
         return host
     except AdbTimeout as e:
-        raise HTTPException(status_code=400, detail="设备连接失败")
+        raise HTTPException(status_code=500, detail="设备连接失败")
 
 
 # 管理wifi
@@ -108,7 +108,7 @@ def manage_wlan(param: wlan_param, db: Session = Depends(getSesion)):
     else:
         logger.info(f"关闭设备WiFi,设备:{host}")
         os.system(f"adb shell settings put global wifi 0")
-    os.system(f"adb disconnect {host}")
+    os.system(f"adb disconnect")
 
     config = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).one_or_none()
     if config:
@@ -147,6 +147,7 @@ def manage_eth(param: eth_param, db: Session = Depends(getSesion)):
 
     logger.info(f"准备重启设备:{host}")
     os.system(f"adb reboot {host}")
+    os.system(f"adb disconnect")
     logger.info(f"开始修改数据库数据:{host}")
     device = db.query(Devices).filter(Devices.id == param.deviceId).one()
     device.ip_address = param.ip_address
@@ -173,20 +174,25 @@ def open_hotspot(param: hotspot_param, db: Session = Depends(getSesion)):
         logger.info(f"开始开启设备热点,设备:{host}")
         os.system("adb shell settings put global wifi_ap_on 1")
         logger.info(f"开始下载设备热点数据文件,设备:{host}")
-        os.system(f"adb pull /data/misc/wifi/hostapd.conf {hostapd_path}")
-        with open(hostapd_path, "r") as f:
-            # 添加到内容末尾
-            lines = ["interface=wlan0", "driver=nl80211", "ctrl_interface=/data/misc/wifi/hostapd", f"ssid={param.ssid}", "channel=6", "ieee80211n=1", "hw_mode=g", "ignore_broadcast_ssid=0", "wpa=1", "wpa_pairwise=TKIP", f"wpa_psk={get_hotspot_password(param.ssid,param.password)}"]
-            with open(hostapd_path, "w") as f:
-                for line in lines:
-                    f.write(line + "\n")
-        logger.info(f"开始覆盖设备热点数据文件,设备:{host}")
-        os.system(f"adb push {hostapd_path} /data/misc/wifi/hostapd.conf")
-        logger.info(f"设备热点数据文件修改完成,设备:{host}")
+        # 检查文件是否存在，如果存在则删除
+        if os.path.exists(f"{softap_path}"):
+            os.remove(f"{softap_path}")
+        # 创建空白文件
+        open(f"{softap_path}", "w").close()
+        # 向文件中写入内容
+        with open(f"{softap_path}", "w") as file:
+            length = len(param.ssid)
+            content = f"0000 0001 000{length} {get_hotspot_ssid(param.ssid)} 0100 0008"
+            pwd = get_host_pwd(param.password)
+            file.write(content + "\n")
+            file.write(pwd + " ")
+        os.system(f"adb push {softap_path} /data/misc/wifi/softap.conf")
+        logger.info(f"修改设备热点数据完成,设备:{host}")
+        os.system(f"adb reboot")
     else:
         logger.info(f"关闭设备热点,设备:{host}")
         os.system("adb shell settings put global wifi_ap_on 0")
-    os.system(f"adb disconnect {host}")
+    os.system(f"adb disconnect")
 
     config = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).one_or_none()
     if config:
@@ -208,3 +214,30 @@ def get_hotspot_password(ssid: str, password: str):
     # Convert derived key to hex string
     hex_psk = hexlify(psk).decode("utf-8")
     return hex_psk
+
+
+def get_hotspot_ssid(ssid: str) -> str:
+    hex_string = "".join([hex(ord(c))[2:] for c in ssid])
+    print(hex_string)
+    groups = [hex_string[i : i + 4] for i in range(0, len(hex_string), 4)]
+
+    # 检查最后一个组的长度
+    last_group_length = len(groups[-1])
+
+    # 如果最后一个组长度不足4，则在末尾添加"00"
+    if last_group_length < 4:
+        groups[-1] += "0" * (4 - last_group_length)
+
+    result = " ".join(groups)
+
+    if len(groups) < 3:
+        result += " 0000"
+    return result
+
+
+def get_host_pwd(pwd: str) -> str:
+    hex_string = "".join([hex(ord(c))[2:] for c in pwd])
+    print(hex_string)
+    groups = [hex_string[i : i + 4] for i in range(0, len(hex_string), 4)]
+    result = " ".join(groups)
+    return result
