@@ -165,6 +165,23 @@ def manage_eth(param: eth_param, db: Session = Depends(getSesion)):
     return {"message": "ok"}
 
 
+# @router.post("/hotspot")
+# def open_hotspot(param: hotspot_param, db: Session = Depends(getSesion)):
+#     if os.path.exists(f"{softap_path}"):
+#         os.remove(f"{softap_path}")
+#     # 创建空白文件
+#     open(f"{softap_path}", "w").close()
+#     # 向文件中写入内容
+#     with open(f"{softap_path}", "w") as file:
+#         length = len(param.ssid)
+#         content = f"0000 0001 {str(length).zfill(4)} {get_hotspot_ssid(param.ssid)} 0400 0008"
+#         file.write(content + "\n")
+#         if param.password:
+#             pwd = get_host_pwd(param.password)
+#             file.write(pwd + " ")
+#     return {"message": "ok"}
+
+
 @router.post("/hotspot")
 def open_hotspot(param: hotspot_param, db: Session = Depends(getSesion)):
     host = connect_device(param.deviceId, db)
@@ -174,21 +191,22 @@ def open_hotspot(param: hotspot_param, db: Session = Depends(getSesion)):
         logger.info(f"开始开启设备热点,设备:{host}")
         os.system("adb shell settings put global wifi_ap_on 1")
         logger.info(f"开始下载设备热点数据文件,设备:{host}")
-        # 检查文件是否存在，如果存在则删除
-        if os.path.exists(f"{softap_path}"):
-            os.remove(f"{softap_path}")
-        # 创建空白文件
-        open(f"{softap_path}", "w").close()
+        os.system(f"adb pull /data/misc/wifi/softap.conf {softap_path}")
         # 向文件中写入内容
         with open(f"{softap_path}", "w") as file:
             length = len(param.ssid)
-            content = f"0000 0001 000{length} {get_hotspot_ssid(param.ssid)} 0100 0008"
-            pwd = get_host_pwd(param.password)
-            file.write(content + "\n")
-            file.write(pwd + " ")
+            if param.password:
+                content = f"0000 0001 {str(length).zfill(4)} {get_hotspot_ssid(param.ssid)} 0004 0000"
+                pwd = get_host_pwd(param.password)
+                file.write(content + "\n")
+                file.write(pwd + " ")
+            else:
+                content = f"0000 0001 {str(length).zfill(4)} {get_hotspot_ssid(param.ssid)} 0000 0000"
+                file.write(content + "\n")
+                file.write("00 ")
+        logger.info(f"开始推送softap配置文件,设备:{host}")
         os.system(f"adb push {softap_path} /data/misc/wifi/softap.conf")
-        logger.info(f"修改设备热点数据完成,设备:{host}")
-        os.system(f"adb reboot")
+        logger.info(f"推送softap配置文件完成,设备:{host}")
     else:
         logger.info(f"关闭设备热点,设备:{host}")
         os.system("adb shell settings put global wifi_ap_on 0")
@@ -237,7 +255,8 @@ def get_hotspot_ssid(ssid: str) -> str:
 
 def get_host_pwd(pwd: str) -> str:
     hex_string = "".join([hex(ord(c))[2:] for c in pwd])
-    print(hex_string)
+    len_pw = hex(len(pwd))[2:]
+    hex_string = len_pw.zfill(2) + hex_string
     groups = [hex_string[i : i + 4] for i in range(0, len(hex_string), 4)]
     result = " ".join(groups)
     return result
