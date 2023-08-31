@@ -107,7 +107,7 @@ def manage_wlan(param: wlan_param, db: Session = Depends(getSesion)):
         logger.info(f"修改设备WiFi数据完成,设备:{host}")
     else:
         logger.info(f"关闭设备WiFi,设备:{host}")
-        os.system(f"adb shell settings put global wifi 0")
+        os.system(f"adb shell settings put global wifi_on 0")
     os.system(f"adb disconnect")
 
     config = db.query(Device_Config).filter(Device_Config.device_id == param.deviceId).one_or_none()
