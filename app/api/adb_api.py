@@ -198,12 +198,13 @@ def open_hotspot(param: hotspot_param, db: Session = Depends(getSesion)):
             if param.password:
                 content = f"0000 0001 {str(length).zfill(4)} {get_hotspot_ssid(param.ssid)} 0004 0000"
                 pwd = get_host_pwd(param.password)
-                file.write(content + "\n")
-                file.write(pwd + " ")
+                data = content + "\r\n" + pwd
+                data = bytes.fromhex(data).decode("utf-8")
+                file.write(data)
             else:
                 content = f"0000 0001 {str(length).zfill(4)} {get_hotspot_ssid(param.ssid)} 0000 0000"
-                file.write(content + "\n")
-                file.write("00 ")
+                data = bytes.fromhex(content).decode("utf-8")
+                file.write(data)
         logger.info(f"开始推送softap配置文件,设备:{host}")
         os.system(f"adb push {softap_path} /data/misc/wifi/softap.conf")
         logger.info(f"推送softap配置文件完成,设备:{host}")
